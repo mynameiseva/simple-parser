@@ -8,17 +8,24 @@ page = urllib.request.urlopen(url)
 stephen_king_page = BeautifulSoup(page, "html.parser").find_all("table", class_="wikitable")[1]
 
 def get_novels_links():
-  links = stephen_king_page.find_all("a", href=True)
   wiki_url = "https://ru.wikipedia.org"
-  filtered_links = list(filter(lambda link: link["href"].startswith("/wiki"), links))
-  return list(map(lambda x: wiki_url + x["href"], filtered_links))
+  pick_href = lambda a: a["href"]
+  add_prefix = lambda href: wiki_url + href
+  pick_second_td = lambda tr_tag: tr_tag.find_all('td')[1]
+  pick_first_a = lambda tag: tag.find('a')
+
+  second_columns = map(pick_second_td, stephen_king_page.find_all('tr')[1:])
+  links = filter(lambda x: x is not None, map(pick_first_a, second_columns))
+  hrefs = map(pick_href, links)
+  return list(map(add_prefix, hrefs))
 
 def get_parsed_novel(novels):
-    for novel in novels:
-        novel_link = urllib.request.urlopen(novel)
-        novel_page = BeautifulSoup(novel_link, "html.parser")
-        novel_content = novel_page.find("p")
-        print(novel_content)
+  for novel in novels:
+      novel_link = urllib.request.urlopen(novel)
+      novel_page = BeautifulSoup(novel_link, "html.parser")
+      novel_content = novel_page.select_one(".mw-parser-output > p").text
+      result = re.sub(r'\([^)]*\)', '', novel_content, 1)
+      result = re.sub(r'\[[^]]*\]', '', result)
+      print(result)
 
 get_parsed_novel(get_novels_links())
-
